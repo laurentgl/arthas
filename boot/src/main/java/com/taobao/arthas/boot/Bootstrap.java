@@ -610,7 +610,7 @@ public class Bootstrap {
         telnetArgs.add("--execution-timeout");
         telnetArgs.add("2000");
         // telnet port ,ip
-        telnetArgs.add("127.0.0.1");
+        telnetArgs.add(DEFAULT_TARGET_IP);
         telnetArgs.add("" + telnetPort);
 
         try {

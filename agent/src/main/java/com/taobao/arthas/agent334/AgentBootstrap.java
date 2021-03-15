@@ -75,7 +75,7 @@ public class AgentBootstrap {
         arthasClassLoader = null;
     }
 
-    private static ClassLoader getClassLoader(Instrumentation inst, File arthasCoreJarFile) throws Throwable {
+    private static ClassLoader getClassLoader(File arthasCoreJarFile) throws Throwable {
         // 构造自定义的类加载器，尽量减少Arthas对现有工程的侵蚀
         return loadOrDefineClassLoader(arthasCoreJarFile);
     }
