@@ -277,6 +277,129 @@ public class Bootstrap {
     public void setSelect(String select) {
         this.select = select;
     }
+    
+    
+ // check telnet/http port
+    public static void checkTelnetPort(Bootstrap bootstrap, long telnetPortPid, long httpPortPid){
+        if (bootstrap.getTelnetPortOrDefault() > 0) {
+            telnetPortPid = SocketUtils.findTcpListenProcess(bootstrap.getTelnetPortOrDefault());
+            if (telnetPortPid > 0) {
+                AnsiLog.info("Process {} already using port {}", telnetPortPid, bootstrap.getTelnetPortOrDefault());
+                
+            }
+        }
+        if (bootstrap.getHttpPortOrDefault() > 0) {
+            httpPortPid = SocketUtils.findTcpListenProcess(bootstrap.getHttpPortOrDefault());
+            if (httpPortPid > 0) {
+                AnsiLog.info("Process {} already using port {}", httpPortPid, bootstrap.getHttpPortOrDefault());
+                
+            }
+        }
+        
+    }
+     // find arthas home
+    public static void findArthasHome(Bootstrap bootstrap, File arthasHomeDir) throws IOException {
+        
+        if (bootstrap.getArthasHome() != null) {
+            verifyArthasHome(bootstrap.getArthasHome());
+            arthasHomeDir = new File(bootstrap.getArthasHome());
+        }
+        if (arthasHomeDir == null && bootstrap.getUseVersion() != null) {
+            // try to find from ~/.arthas/lib
+            File specialVersionDir = new File(System.getProperty("user.home"), ".arthas" + File.separator + "lib"
+                            + File.separator + bootstrap.getUseVersion() + File.separator + "arthas");
+            if (!specialVersionDir.exists()) {
+                // try to download arthas from remote server.
+                DownloadUtils.downArthasPackaging(bootstrap.getRepoMirror(), bootstrap.isuseHttp(),
+                                bootstrap.getUseVersion(), ARTHAS_LIB_DIR.getAbsolutePath());
+            }
+            verifyArthasHome(specialVersionDir.getAbsolutePath());
+            arthasHomeDir = specialVersionDir;
+        }
+        
+     // Try set the directory where arthas-boot.jar is located to arhtas home
+        if (arthasHomeDir == null) {
+            CodeSource codeSource = Bootstrap.class.getProtectionDomain().getCodeSource();
+            if (codeSource != null) {
+                try {
+                    // https://stackoverflow.com/a/17870390
+                    File bootJarPath = new File(codeSource.getLocation().toURI().getSchemeSpecificPart());
+                    verifyArthasHome(bootJarPath.getParent());
+                    arthasHomeDir = bootJarPath.getParentFile();
+                } catch (Throwable e) {
+                    // ignore
+                }
+
+            }
+        }
+
+        }
+        
+    public void verifyTelnetAndPort(Bootstrap bootstrap, long telnetPortPid, File arthasHomeDir) {
+        	 if (telnetPortPid > 0 && pid == telnetPortPid) {
+                 AnsiLog.info("The target process already listen port {}, skip attach.", bootstrap.getTelnetPortOrDefault());
+             } else {
+                 //double check telnet port and pid before attach
+                 telnetPortPid = findProcessByTelnetClient(arthasHomeDir.getAbsolutePath(), bootstrap.getTelnetPortOrDefault());
+                 checkTelnetPortPid(bootstrap, telnetPortPid, pid);
+
+                 // start arthas-core.jar
+                 List<String> attachArgs = new ArrayList<String>();
+                 attachArgs.add("-jar");
+                 attachArgs.add(new File(arthasHomeDir, "arthas-core.jar").getAbsolutePath());
+                 attachArgs.add("-pid");
+                 attachArgs.add("" + pid);
+                 if (bootstrap.getTargetIp() != null) {
+                     attachArgs.add("-target-ip");
+                     attachArgs.add(bootstrap.getTargetIp());
+                 }
+
+                 if (bootstrap.getTelnetPort() != null) {
+                     attachArgs.add("-telnet-port");
+                     attachArgs.add("" + bootstrap.getTelnetPort());
+                 }
+
+                 if (bootstrap.getHttpPort() != null) {
+                     attachArgs.add("-http-port");
+                     attachArgs.add("" + bootstrap.getHttpPort());
+                 }
+
+                 attachArgs.add("-core");
+                 attachArgs.add(new File(arthasHomeDir, "arthas-core.jar").getAbsolutePath());
+                 attachArgs.add("-agent");
+                 attachArgs.add(new File(arthasHomeDir, "arthas-agent.jar").getAbsolutePath());
+                 if (bootstrap.getSessionTimeout() != null) {
+                     attachArgs.add("-session-timeout");
+                     attachArgs.add("" + bootstrap.getSessionTimeout());
+                 }
+
+                 if (bootstrap.getTunnelServer() != null) {
+                     attachArgs.add("-tunnel-server");
+                     attachArgs.add(bootstrap.getTunnelServer());
+                 }
+                 if (bootstrap.getAgentId() != null) {
+                     attachArgs.add("-agent-id");
+                     attachArgs.add(bootstrap.getAgentId());
+                 }
+                 if (bootstrap.getStatUrl() != null) {
+                     attachArgs.add("-stat-url");
+                     attachArgs.add(bootstrap.getStatUrl());
+                 }
+
+                 AnsiLog.info("Try to attach process " + pid);
+                 AnsiLog.debug("Start arthas-core.jar args: " + attachArgs);
+                 ProcessUtils.startArthasCore(pid, attachArgs);
+
+                 AnsiLog.info("Attach process {} success.", pid);
+             }
+
+             if (bootstrap.isAttachOnly()) {
+                 System.exit(0);
+             }
+
+        }
+        
+    
 
     public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException,
                     ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalAccessException,
@@ -330,22 +453,11 @@ public class Bootstrap {
                             JavaVersionUtils.javaVersionStr());
         }
 
-        // check telnet/http port
         long telnetPortPid = -1;
         long httpPortPid = -1;
-        if (bootstrap.getTelnetPortOrDefault() > 0) {
-            telnetPortPid = SocketUtils.findTcpListenProcess(bootstrap.getTelnetPortOrDefault());
-            if (telnetPortPid > 0) {
-                AnsiLog.info("Process {} already using port {}", telnetPortPid, bootstrap.getTelnetPortOrDefault());
-            }
-        }
-        if (bootstrap.getHttpPortOrDefault() > 0) {
-            httpPortPid = SocketUtils.findTcpListenProcess(bootstrap.getHttpPortOrDefault());
-            if (httpPortPid > 0) {
-                AnsiLog.info("Process {} already using port {}", httpPortPid, bootstrap.getHttpPortOrDefault());
-            }
-        }
-
+        
+        //appel à la fonction extraite checkTelnetPort
+        checkTelnetPort(bootstrap, telnetPortPid, httpPortPid);
         long pid = bootstrap.getPid();
         // select pid
         if (pid < 0) {
@@ -372,41 +484,10 @@ public class Bootstrap {
             System.exit(1);
         }
 
-        // find arthas home
+        //appel à la fonction extraite findArthasHome
         File arthasHomeDir = null;
-        if (bootstrap.getArthasHome() != null) {
-            verifyArthasHome(bootstrap.getArthasHome());
-            arthasHomeDir = new File(bootstrap.getArthasHome());
-        }
-        if (arthasHomeDir == null && bootstrap.getUseVersion() != null) {
-            // try to find from ~/.arthas/lib
-            File specialVersionDir = new File(System.getProperty("user.home"), ".arthas" + File.separator + "lib"
-                            + File.separator + bootstrap.getUseVersion() + File.separator + "arthas");
-            if (!specialVersionDir.exists()) {
-                // try to download arthas from remote server.
-                DownloadUtils.downArthasPackaging(bootstrap.getRepoMirror(), bootstrap.isuseHttp(),
-                                bootstrap.getUseVersion(), ARTHAS_LIB_DIR.getAbsolutePath());
-            }
-            verifyArthasHome(specialVersionDir.getAbsolutePath());
-            arthasHomeDir = specialVersionDir;
-        }
-
-        // Try set the directory where arthas-boot.jar is located to arhtas home
-        if (arthasHomeDir == null) {
-            CodeSource codeSource = Bootstrap.class.getProtectionDomain().getCodeSource();
-            if (codeSource != null) {
-                try {
-                    // https://stackoverflow.com/a/17870390
-                    File bootJarPath = new File(codeSource.getLocation().toURI().getSchemeSpecificPart());
-                    verifyArthasHome(bootJarPath.getParent());
-                    arthasHomeDir = bootJarPath.getParentFile();
-                } catch (Throwable e) {
-                    // ignore
-                }
-
-            }
-        }
-
+        findArthasHome(bootstrap, arthasHomeDir);
+      
         // try to download from remote server
         if (arthasHomeDir == null) {
             boolean checkFile =  ARTHAS_LIB_DIR.exists() || ARTHAS_LIB_DIR.mkdirs();
@@ -467,68 +548,11 @@ public class Bootstrap {
         verifyArthasHome(arthasHomeDir.getAbsolutePath());
 
         AnsiLog.info("arthas home: " + arthasHomeDir);
-
-        if (telnetPortPid > 0 && pid == telnetPortPid) {
-            AnsiLog.info("The target process already listen port {}, skip attach.", bootstrap.getTelnetPortOrDefault());
-        } else {
-            //double check telnet port and pid before attach
-            telnetPortPid = findProcessByTelnetClient(arthasHomeDir.getAbsolutePath(), bootstrap.getTelnetPortOrDefault());
-            checkTelnetPortPid(bootstrap, telnetPortPid, pid);
-
-            // start arthas-core.jar
-            List<String> attachArgs = new ArrayList<String>();
-            attachArgs.add("-jar");
-            attachArgs.add(new File(arthasHomeDir, "arthas-core.jar").getAbsolutePath());
-            attachArgs.add("-pid");
-            attachArgs.add("" + pid);
-            if (bootstrap.getTargetIp() != null) {
-                attachArgs.add("-target-ip");
-                attachArgs.add(bootstrap.getTargetIp());
-            }
-
-            if (bootstrap.getTelnetPort() != null) {
-                attachArgs.add("-telnet-port");
-                attachArgs.add("" + bootstrap.getTelnetPort());
-            }
-
-            if (bootstrap.getHttpPort() != null) {
-                attachArgs.add("-http-port");
-                attachArgs.add("" + bootstrap.getHttpPort());
-            }
-
-            attachArgs.add("-core");
-            attachArgs.add(new File(arthasHomeDir, "arthas-core.jar").getAbsolutePath());
-            attachArgs.add("-agent");
-            attachArgs.add(new File(arthasHomeDir, "arthas-agent.jar").getAbsolutePath());
-            if (bootstrap.getSessionTimeout() != null) {
-                attachArgs.add("-session-timeout");
-                attachArgs.add("" + bootstrap.getSessionTimeout());
-            }
-
-            if (bootstrap.getTunnelServer() != null) {
-                attachArgs.add("-tunnel-server");
-                attachArgs.add(bootstrap.getTunnelServer());
-            }
-            if (bootstrap.getAgentId() != null) {
-                attachArgs.add("-agent-id");
-                attachArgs.add(bootstrap.getAgentId());
-            }
-            if (bootstrap.getStatUrl() != null) {
-                attachArgs.add("-stat-url");
-                attachArgs.add(bootstrap.getStatUrl());
-            }
-
-            AnsiLog.info("Try to attach process " + pid);
-            AnsiLog.debug("Start arthas-core.jar args: " + attachArgs);
-            ProcessUtils.startArthasCore(pid, attachArgs);
-
-            AnsiLog.info("Attach process {} success.", pid);
-        }
-
-        if (bootstrap.isAttachOnly()) {
-            System.exit(0);
-        }
-
+        
+        // appel à la fonction extraire verifyTelnetAndPid
+        verifyTelnetAndPort(bootstrap, telnetPortPid, arthasHomeDir);
+       
+        
         // start java telnet client
         // find arthas-client.jar
         URLClassLoader classLoader = new URLClassLoader(
@@ -619,6 +643,7 @@ public class Bootstrap {
                     break;
                 }
             }
+            scanner.close();
             if (javaPidLine != null) {
                 // JAVA_PID    10473
                 try {
