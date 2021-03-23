@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 
-import com.alibaba.deps.org.objectweb.asm.ClassReader;
 import com.alibaba.arthas.deps.org.slf4j.Logger;
 import com.alibaba.arthas.deps.org.slf4j.LoggerFactory;
 import com.taobao.arthas.core.command.Constants;
@@ -119,10 +118,6 @@ public class RedefineCommand extends ModifyCommand {
             process.end(-1, message);
         }
 
-    }
-
-    private static String readClassName(final byte[] bytes) {
-        return new ClassReader(bytes).getClassName().replace("/", ".");
     }
 
     @Override

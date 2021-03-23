@@ -2,7 +2,6 @@ package com.taobao.arthas.core.command.klass100;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.io.IOException;
@@ -11,6 +10,7 @@ import java.io.IOException;
 import com.taobao.arthas.core.shell.command.AnnotatedCommand;
 import com.taobao.arthas.core.shell.command.CommandProcess;
 import com.alibaba.arthas.deps.org.slf4j.Logger;
+import com.alibaba.deps.org.objectweb.asm.ClassReader;
 
 
 abstract class ModifyCommand extends AnnotatedCommand {
@@ -60,7 +60,7 @@ abstract class ModifyCommand extends AnnotatedCommand {
         }
     }
 
-    private String readClassName(byte[] bytes) {
-        return null;
+    private static String readClassName(final byte[] bytes) {
+        return new ClassReader(bytes).getClassName().replace('/', '.');
     }
 }

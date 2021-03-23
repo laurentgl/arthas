@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.alibaba.arthas.deps.org.slf4j.Logger;
 import com.alibaba.arthas.deps.org.slf4j.LoggerFactory;
-import com.alibaba.deps.org.objectweb.asm.ClassReader;
 import com.taobao.arthas.core.advisor.TransformerManager;
 import com.taobao.arthas.core.command.Constants;
 import com.taobao.arthas.core.command.model.ClassLoaderVO;
@@ -253,9 +252,7 @@ public class RetransformCommand extends ModifyCommand {
 
     }
 
-    private static String readClassName(final byte[] bytes) {
-        return new ClassReader(bytes).getClassName().replace('/', '.');
-    }
+    
 
     @Override
     public void complete(Completion completion) {
