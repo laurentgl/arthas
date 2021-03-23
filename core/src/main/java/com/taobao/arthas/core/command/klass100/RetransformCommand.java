@@ -1,8 +1,5 @@
 package com.taobao.arthas.core.command.klass100;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -29,7 +26,6 @@ import com.taobao.arthas.core.server.ArthasBootstrap;
 import com.taobao.arthas.core.shell.cli.CliToken;
 import com.taobao.arthas.core.shell.cli.Completion;
 import com.taobao.arthas.core.shell.cli.CompletionUtils;
-import com.taobao.arthas.core.shell.command.AnnotatedCommand;
 import com.taobao.arthas.core.shell.command.CommandProcess;
 import com.taobao.arthas.core.util.ClassLoaderUtils;
 import com.taobao.arthas.core.util.ClassUtils;
@@ -59,9 +55,8 @@ import com.taobao.middleware.cli.annotations.Summary;
         + "  retransform --classLoaderClass 'sun.misc.Launcher$AppClassLoader' /tmp/Test.class\n"
         + Constants.WIKI + Constants.WIKI_HOME
         + "retransform")
-public class RetransformCommand extends AnnotatedCommand {
+public class RetransformCommand extends ModifyCommand {
     private static final Logger logger = LoggerFactory.getLogger(RetransformCommand.class);
-    private static final int MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     private static volatile List<RetransformEntry> retransformEntries = new ArrayList<RetransformEntry>();
     private static volatile ClassFileTransformer transformer = null;
@@ -193,53 +188,8 @@ public class RetransformCommand extends AnnotatedCommand {
             }
         }
 
-        for (String path : paths) {
-            File file = new File(path);
-            if (!file.exists()) {
-                process.end(-1, "file does not exist, path:" + path);
-                return;
-            }
-            if (!file.isFile()) {
-                process.end(-1, "not a normal file, path:" + path);
-                return;
-            }
-            if (file.length() >= MAX_FILE_SIZE) {
-                process.end(-1, "file size: " + file.length() + " >= " + MAX_FILE_SIZE + ", path: " + path);
-                return;
-            }
-        }
-
         Map<String, byte[]> bytesMap = new HashMap<String, byte[]>();
-        for (String path : paths) {
-            RandomAccessFile f = null;
-            try {
-                f = new RandomAccessFile(path, "r");
-                final byte[] bytes = new byte[(int) f.length()];
-                f.readFully(bytes);
-
-                final String clazzName = readClassName(bytes);
-
-                bytesMap.put(clazzName, bytes);
-
-            } catch (Exception e) {
-                logger.warn("load class file failed: " + path, e);
-                process.end(-1, "load class file failed: " + path + ", error: " + e);
-                return;
-            } finally {
-                if (f != null) {
-                    try {
-                        f.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
-            }
-        }
-
-        if (bytesMap.size() != paths.size()) {
-            process.end(-1, "paths may contains same class name!");
-            return;
-        }
+        processPath(process, paths, logger, bytesMap);
 
         List<RetransformEntry> retransformEntryList = new ArrayList<RetransformEntry>();
 

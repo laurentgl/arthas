@@ -1,8 +1,5 @@
 package com.taobao.arthas.core.command.klass100;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
@@ -19,7 +16,6 @@ import com.taobao.arthas.core.command.model.RedefineModel;
 import com.taobao.arthas.core.command.model.ClassLoaderVO;
 import com.taobao.arthas.core.shell.cli.Completion;
 import com.taobao.arthas.core.shell.cli.CompletionUtils;
-import com.taobao.arthas.core.shell.command.AnnotatedCommand;
 import com.taobao.arthas.core.shell.command.CommandProcess;
 import com.taobao.arthas.core.util.ClassUtils;
 import com.taobao.arthas.core.util.ClassLoaderUtils;
@@ -42,9 +38,9 @@ import com.taobao.middleware.cli.annotations.Summary;
                 "  redefine -c 327a647b /tmp/Test.class /tmp/Test\\$Inner.class \n" +
                 "  redefine --classLoaderClass 'sun.misc.Launcher$AppClassLoader' /tmp/Test.class \n" +
                 Constants.WIKI + Constants.WIKI_HOME + "redefine")
-public class RedefineCommand extends AnnotatedCommand {
+public class RedefineCommand extends ModifyCommand {
     private static final Logger logger = LoggerFactory.getLogger(RedefineCommand.class);
-    private static final int MAX_FILE_SIZE = 10 * 1024 * 1024;
+    
 
     private String hashCode;
     private String classLoaderClass;
@@ -73,53 +69,9 @@ public class RedefineCommand extends AnnotatedCommand {
     public void process(CommandProcess process) {
         RedefineModel redefineModel = new RedefineModel();
         Instrumentation inst = process.session().getInstrumentation();
-        for (String path : paths) {
-            File file = new File(path);
-            if (!file.exists()) {
-                process.end(-1, "file does not exist, path:" + path);
-                return;
-            }
-            if (!file.isFile()) {
-                process.end(-1, "not a normal file, path:" + path);
-                return;
-            }
-            if (file.length() >= MAX_FILE_SIZE) {
-                process.end(-1, "file size: " + file.length() + " >= " + MAX_FILE_SIZE + ", path: " + path);
-                return;
-            }
-        }
-
+        
         Map<String, byte[]> bytesMap = new HashMap<String, byte[]>();
-        for (String path : paths) {
-            RandomAccessFile f = null;
-            try {
-                f = new RandomAccessFile(path, "r");
-                final byte[] bytes = new byte[(int) f.length()];
-                f.readFully(bytes);
-
-                final String clazzName = readClassName(bytes);
-
-                bytesMap.put(clazzName, bytes);
-
-            } catch (Exception e) {
-                logger.warn("load class file failed: "+path, e);
-                process.end(-1, "load class file failed: " +path+", error: " + e);
-                return;
-            } finally {
-                if (f != null) {
-                    try {
-                        f.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
-            }
-        }
-
-        if (bytesMap.size() != paths.size()) {
-            process.end(-1, "paths may contains same class name!");
-            return;
-        }
+        processPath(process, paths, logger, bytesMap);
 
         List<ClassDefinition> definitions = new ArrayList<ClassDefinition>();
         for (Class<?> clazz : inst.getAllLoadedClasses()) {
