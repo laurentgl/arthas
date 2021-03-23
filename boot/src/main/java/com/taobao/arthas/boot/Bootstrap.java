@@ -1,4 +1,4 @@
-
+package com.taobao.arthas.boot;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
