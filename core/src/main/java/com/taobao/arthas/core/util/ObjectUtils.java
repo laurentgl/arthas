@@ -436,7 +436,7 @@ public abstract class ObjectUtils {
         }
     }
 
-    public static String nullSafeToString(Object array) {
+    public static String nullSafeToString(Object[] array) {
         if(array == null) {
             return "null";
         } else {
@@ -452,7 +452,7 @@ public abstract class ObjectUtils {
                     } else {
                         sb.append(", ");
                     }
-		    if(array instanceof char[]){
+		    if(array[i] instanceof char[]){
 		    	sb.append("\'").append(array[i]).append("\'");
 		    }
 		    else{
