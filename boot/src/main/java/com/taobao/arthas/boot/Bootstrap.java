@@ -1,4 +1,4 @@
-package com.taobao.arthas.boot;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -22,6 +22,8 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import com.taobao.arthas.boot.DownloadUtils;
+import com.taobao.arthas.boot.ProcessUtils;
 import com.taobao.arthas.common.AnsiLog;
 import com.taobao.arthas.common.JavaVersionUtils;
 import com.taobao.arthas.common.SocketUtils;
@@ -66,7 +68,7 @@ public class Bootstrap {
 
     private boolean help = false;
 
-    private long pid = -1;
+    private static long pid = -1;
     private String targetIp;
     private Integer telnetPort;
     private Integer httpPort;
@@ -335,7 +337,7 @@ public class Bootstrap {
 
         }
         
-    public void verifyTelnetAndPort(Bootstrap bootstrap, long telnetPortPid, File arthasHomeDir) {
+    public static void verifyTelnetAndPort(Bootstrap bootstrap, long telnetPortPid, File arthasHomeDir) {
         	 if (telnetPortPid > 0 && pid == telnetPortPid) {
                  AnsiLog.info("The target process already listen port {}, skip attach.", bootstrap.getTelnetPortOrDefault());
              } else {
@@ -549,7 +551,7 @@ public class Bootstrap {
 
         AnsiLog.info("arthas home: " + arthasHomeDir);
         
-        // appel à la fonction extraire verifyTelnetAndPid
+     // appel à la fonction extraire verifyTelnetAndPid
         verifyTelnetAndPort(bootstrap, telnetPortPid, arthasHomeDir);
        
         
