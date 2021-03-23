@@ -22,8 +22,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import com.taobao.arthas.boot.DownloadUtils;
-import com.taobao.arthas.boot.ProcessUtils;
+
 import com.taobao.arthas.common.AnsiLog;
 import com.taobao.arthas.common.JavaVersionUtils;
 import com.taobao.arthas.common.SocketUtils;
