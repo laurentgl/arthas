@@ -436,7 +436,7 @@ public abstract class ObjectUtils {
         }
     }
 
-    public static String nullSafeToString(Object[] array) {
+    public static String nullSafeToString(Object array) {
         if(array == null) {
             return "null";
         } else {
