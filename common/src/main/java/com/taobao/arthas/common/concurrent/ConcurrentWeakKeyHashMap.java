@@ -109,7 +109,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
      */
     final Segment<K, V>[] segments;
 
-    Set<K> keySet;
+    Set<K> key_Set;
     Set<Map.Entry<K, V>> entrySet;
     Collection<V> values;
 
@@ -1096,8 +1096,8 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
      */
     @Override
     public Set<K> keySet() {
-        Set<K> ks = keySet;
-        return ks != null? ks : (keySet = new KeySet());
+        Set<K> ks = key_Set;
+        return ks != null? ks : (key_Set = new KeySet());
     }
 
     /**
@@ -1168,7 +1168,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         int nextSegmentIndex;
         int nextTableIndex;
         HashEntry<K, V>[] currentTable;
-        HashEntry<K, V> nextEntry;
+        HashEntry<K, V> next_Entry;
         HashEntry<K, V> lastReturned;
         K currentKey; // Strong reference to weak key (prevents gc)
 
@@ -1182,7 +1182,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
             nextSegmentIndex = segments.length - 1;
             nextTableIndex = -1;
             currentTable = null;
-            nextEntry = null;
+            next_Entry = null;
             lastReturned = null;
             currentKey = null;
             advance();
@@ -1193,12 +1193,12 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         }
 
         final void advance() {
-            if (nextEntry != null && (nextEntry = nextEntry.next) != null) {
+            if (next_Entry != null && (next_Entry = next_Entry.next) != null) {
                 return;
             }
 
             while (nextTableIndex >= 0) {
-                if ((nextEntry = currentTable[nextTableIndex --]) != null) {
+                if ((next_Entry = currentTable[nextTableIndex --]) != null) {
                     return;
                 }
             }
@@ -1208,7 +1208,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
                 if (seg.count != 0) {
                     currentTable = seg.table;
                     for (int j = currentTable.length - 1; j >= 0; -- j) {
-                        if ((nextEntry = currentTable[j]) != null) {
+                        if ((next_Entry = currentTable[j]) != null) {
                             nextTableIndex = j - 1;
                             return;
                         }
@@ -1218,8 +1218,8 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         }
 
         public boolean hasNext() {
-            while (nextEntry != null) {
-                if (nextEntry.key() != null) {
+            while (next_Entry != null) {
+                if (next_Entry.key() != null) {
                     return true;
                 }
                 advance();
@@ -1230,11 +1230,11 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         HashEntry<K, V> nextEntry() {
             do {
-                if (nextEntry == null) {
+                if (next_Entry == null) {
                     throw new NoSuchElementException();
                 }
 
-                lastReturned = nextEntry;
+                lastReturned = next_Entry;
                 currentKey = lastReturned.key();
                 advance();
             } while (currentKey == null); // Skip GC'd keys
